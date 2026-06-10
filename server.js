@@ -47,11 +47,11 @@ const COMMITTEES = {
     name: 'Festival Towers',
     size: 5,
     members: [
-      { id: 'ft1', name: 'Michael Torres', email: 'michael.torres.ft@mailinator.com' },
-      { id: 'ft2', name: 'Angela Nguyen', email: 'angela.nguyen.ft@mailinator.com' },
-      { id: 'ft3', name: 'Robert Singh', email: 'robert.singh.ft@mailinator.com' },
-      { id: 'ft4', name: 'Claire Dubois', email: 'claire.dubois.ft@mailinator.com' },
-      { id: 'ft5', name: 'Tony Papadopoulos', email: 'tony.papa.ft@mailinator.com' }
+      { id: 'ft1', name: 'Michael Torres', email: 'roderickharding@hotmail.com' },
+      { id: 'ft2', name: 'Angela Nguyen', email: 'roderickharding@hotmail.com' },
+      { id: 'ft3', name: 'Robert Singh', email: 'roderickharding@hotmail.com' },
+      { id: 'ft4', name: 'Claire Dubois', email: 'roderickharding@hotmail.com' },
+      { id: 'ft5', name: 'Tony Papadopoulos', email: 'roderickharding@hotmail.com' }
     ]
   },
   NC: {
