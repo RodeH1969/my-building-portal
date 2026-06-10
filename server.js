@@ -12,7 +12,9 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── FIREBASE ───
-const serviceAccount = require('./firebase-key.json');
+const serviceAccount = process.env.FIREBASE_SERVICE_ACCOUNT
+  ? JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT)
+  : require('./firebase-key.json');
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
   databaseURL: process.env.FIREBASE_URL
