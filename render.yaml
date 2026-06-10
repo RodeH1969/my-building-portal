@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: my-building-portal
+    env: node
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: SENDGRID_FROM
+        sync: false
+      - key: FIREBASE_URL
+        sync: false
+      - key: BASE_URL
+        sync: false
+      - key: PORT
+        value: 3000
