@@ -9,6 +9,7 @@ const { v4: uuidv4 } = require('uuid');
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ─── FIREBASE ───
@@ -23,6 +24,9 @@ const db = admin.database();
 
 // ─── SENDGRID ───
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+// ─── BUILDING MANAGER EMAIL (use real email in production) ───
+const BUILDING_MANAGER_EMAIL = 'airbrandr@gmail.com';
 
 // ─── MAJORITY RULES ───
 function requiredVotes(committeeSize) {
@@ -214,7 +218,8 @@ app.get('/vote', async (req, res) => {
 
     // Check submission still open
     if (submission.status !== 'pending_vote') {
-      return res.send(votePage('This application has already been decided.', 'closed'));
+      const outcome = submission.outcome === 'approved' ? 'approved ✓' : 'rejected ✗';
+      return res.send(votePage(`Thank you for your response. A majority has already been reached and this application has been <strong>${outcome}</strong>. Your intention to vote has been noted.`, 'closed'));
     }
 
     // Check already voted
@@ -247,6 +252,9 @@ app.get('/vote', async (req, res) => {
     await db.ref(`tokens/${token}`).remove();
     
     console.log('Vote recorded:', { submissionId, memberId, decision });
+
+    // Notify building manager of vote
+    await notifyBuildingManager(submission, submission.votes[memberId].name, decision, null);
 
     // Check if majority reached
     await checkMajority(submissionId);
@@ -298,6 +306,9 @@ app.post('/vote/info', async (req, res) => {
     }
 
     await db.ref(`tokens/${token}`).remove();
+
+    // Notify building manager of info request
+    await notifyBuildingManager(submission, submission.votes[memberId].name, 'info', infoRequest);
 
     return res.send(votePage(`Thank you. Your information request has been sent to the applicant.`, 'success'));
 
@@ -481,6 +492,9 @@ async function sendOutcomeEmail(submission, outcome) {
     subject: `Application ${word}: ${submission.formLabel} [${submission.ref}]`,
     html
   });
+
+  // Notify building manager of final outcome
+  await notifyBuildingManager(submission, null, 'outcome-' + outcome, null);
 }
 
 // ─── SEND INFO REQUEST EMAIL TO APPLICANT ───
@@ -555,6 +569,62 @@ function infoRequestPage(token, submission) {
     <button type="submit">Send Information Request</button>
   </form>
   </div></body></html>`;
+}
+
+// ─── NOTIFY BUILDING MANAGER ───
+async function notifyBuildingManager(submission, memberName, action, extra) {
+  try {
+    let subject, bodyLine;
+
+    if (action === 'approve') {
+      subject = `Vote: APPROVED — ${submission.formLabel} Lot ${submission.lot}, ${submission.building} [${submission.ref}]`;
+      bodyLine = `<strong>${memberName}</strong> voted <strong style="color:#2d9e5c;">Approve</strong>.`;
+    } else if (action === 'reject') {
+      subject = `Vote: REJECTED — ${submission.formLabel} Lot ${submission.lot}, ${submission.building} [${submission.ref}]`;
+      bodyLine = `<strong>${memberName}</strong> voted <strong style="color:#d84a30;">Reject</strong>.`;
+    } else if (action === 'info') {
+      subject = `More Info Requested — ${submission.formLabel} Lot ${submission.lot}, ${submission.building} [${submission.ref}]`;
+      bodyLine = `<strong>${memberName}</strong> requested more information:<br/><em style="color:#7a5c10;">${extra}</em>`;
+    } else if (action === 'outcome-approved') {
+      subject = `APPROVED ✓ — ${submission.formLabel} Lot ${submission.lot}, ${submission.building} [${submission.ref}]`;
+      bodyLine = `<strong style="color:#2d9e5c;">Majority reached. Application APPROVED.</strong>`;
+    } else if (action === 'outcome-rejected') {
+      subject = `REJECTED ✗ — ${submission.formLabel} Lot ${submission.lot}, ${submission.building} [${submission.ref}]`;
+      bodyLine = `<strong style="color:#d84a30;">Majority reached. Application REJECTED.</strong>`;
+    } else {
+      return;
+    }
+
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;">
+        <div style="background:#1a3a5c;padding:16px 20px;border-radius:8px 8px 0 0;">
+          <h2 style="color:#fff;font-size:16px;margin:0;">My Building Portal — Building Manager Update</h2>
+        </div>
+        <div style="padding:20px;border:1px solid #e2e5ea;border-top:none;border-radius:0 0 8px 8px;">
+          <p style="font-size:13px;color:#5a6478;">${bodyLine}</p>
+          <div style="background:#f4f5f7;border-radius:8px;padding:12px;margin:12px 0;font-size:12px;color:#1a2333;">
+            <table style="width:100%;">
+              <tr><td style="color:#9aa3b2;padding:2px 0;width:120px;">Building</td><td><strong>${submission.building}</strong></td></tr>
+              <tr><td style="color:#9aa3b2;padding:2px 0;">Lot</td><td><strong>${submission.lot}</strong></td></tr>
+              <tr><td style="color:#9aa3b2;padding:2px 0;">Form</td><td><strong>${submission.formLabel}</strong></td></tr>
+              <tr><td style="color:#9aa3b2;padding:2px 0;">Reference</td><td><strong>${submission.ref}</strong></td></tr>
+              <tr><td style="color:#9aa3b2;padding:2px 0;">Applicant</td><td><strong>${submission.formData && submission.formData.name || 'Unknown'}</strong></td></tr>
+            </table>
+          </div>
+        </div>
+      </div>
+    `;
+
+    await sgMail.send({
+      to: BUILDING_MANAGER_EMAIL,
+      from: { email: process.env.SENDGRID_FROM, name: 'My Building Portal' },
+      subject,
+      html
+    });
+    console.log('Building manager notified:', action);
+  } catch (err) {
+    console.error('Building manager notification failed:', err.message);
+  }
 }
 
 // ─── ADMIN: GET ALL SUBMISSIONS ───
