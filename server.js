@@ -320,15 +320,18 @@ app.post('/vote/info', async (req, res) => {
 
 // ─── CHECK MAJORITY ───
 async function checkMajority(submissionId) {
+  // Re-fetch fresh data after vote recorded
   const subSnap = await db.ref(`submissions/${submissionId}`).once('value');
   const submission = subSnap.val();
 
-  if (submission.status !== 'pending_vote') return;
+  if (!submission || submission.status !== 'pending_vote') return;
 
-  const votes = Object.values(submission.votes);
+  const votes = Object.values(submission.votes || {});
   const approvals = votes.filter(v => v.vote === 'approve').length;
   const rejections = votes.filter(v => v.vote === 'reject').length;
   const required = submission.requiredVotes;
+
+  console.log(`Majority check: ${approvals} approvals, ${rejections} rejections, ${required} required`);
 
   if (approvals >= required) {
     await db.ref(`submissions/${submissionId}`).update({
@@ -336,14 +339,19 @@ async function checkMajority(submissionId) {
       outcome: 'approved',
       outcomeAt: new Date().toISOString()
     });
-    await sendOutcomeEmail(submission, 'approved');
+    // Re-fetch updated submission for emails
+    const updatedSnap = await db.ref(`submissions/${submissionId}`).once('value');
+    await sendOutcomeEmail(updatedSnap.val(), 'approved');
+    await notifyBuildingManager(updatedSnap.val(), null, 'outcome-approved', null);
   } else if (rejections >= required) {
     await db.ref(`submissions/${submissionId}`).update({
       status: 'rejected',
       outcome: 'rejected',
       outcomeAt: new Date().toISOString()
     });
-    await sendOutcomeEmail(submission, 'rejected');
+    const updatedSnap = await db.ref(`submissions/${submissionId}`).once('value');
+    await sendOutcomeEmail(updatedSnap.val(), 'rejected');
+    await notifyBuildingManager(updatedSnap.val(), null, 'outcome-rejected', null);
   }
 }
 
@@ -351,9 +359,12 @@ async function checkMajority(submissionId) {
 async function sendVoteEmails(submission, committee) {
   const baseUrl = process.env.BASE_URL;
 
-  for (const member of committee.members) {
+  for (let i = 0; i < committee.members.length; i++) {
+    const member = committee.members[i];
     const memberVote = submission.votes[member.id];
     const token = memberVote.token;
+    // Small delay between emails to avoid rate limiting
+    if (i > 0) await new Promise(resolve => setTimeout(resolve, 300));
 
     const approveUrl = `${baseUrl}/vote?token=${token}&decision=approve`;
     const rejectUrl = `${baseUrl}/vote?token=${token}&decision=reject`;
@@ -493,8 +504,7 @@ async function sendOutcomeEmail(submission, outcome) {
     html
   });
 
-  // Notify building manager of final outcome
-  await notifyBuildingManager(submission, null, 'outcome-' + outcome, null);
+  // Building manager outcome notification is handled by checkMajority
 }
 
 // ─── SEND INFO REQUEST EMAIL TO APPLICANT ───
@@ -577,10 +587,10 @@ async function notifyBuildingManager(submission, memberName, action, extra) {
     let subject, bodyLine;
 
     if (action === 'approve') {
-      subject = `Vote: APPROVED — ${submission.formLabel} Lot ${submission.lot}, ${submission.building} [${submission.ref}]`;
+      subject = `Committee Vote — ${memberName} voted Approve — ${submission.formLabel} Lot ${submission.lot} [${submission.ref}]`;
       bodyLine = `<strong>${memberName}</strong> voted <strong style="color:#2d9e5c;">Approve</strong>.`;
     } else if (action === 'reject') {
-      subject = `Vote: REJECTED — ${submission.formLabel} Lot ${submission.lot}, ${submission.building} [${submission.ref}]`;
+      subject = `Committee Vote — ${memberName} voted Reject — ${submission.formLabel} Lot ${submission.lot} [${submission.ref}]`;
       bodyLine = `<strong>${memberName}</strong> voted <strong style="color:#d84a30;">Reject</strong>.`;
     } else if (action === 'info') {
       subject = `More Info Requested — ${submission.formLabel} Lot ${submission.lot}, ${submission.building} [${submission.ref}]`;
