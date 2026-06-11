@@ -126,6 +126,15 @@ body{font-family:'Barlow',sans-serif;background:#f4f5f7;color:#1a2333;font-size:
 .new-btn:hover{border-color:#1a5a9e;color:#1a5a9e;}
 .ftr{padding:10px 18px;text-align:center;border-top:1px solid #e2e5ea;background:#fff;margin-top:20px;}
 .ftr p{font-size:9px;color:#c0c8d5;letter-spacing:0.05em;}
+
+@keyframes pulse-red {
+  0%,100%{color:#1a2333;}
+  50%{color:#d84a30;}
+}
+.pulse-title{animation:pulse-red 1.8s ease-in-out infinite;font-weight:700;font-size:10px;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;}
+.pulse-attach{animation:pulse-red 1.4s ease-in-out infinite;font-weight:700;font-size:12px;color:#d84a30;}
+.attach-warn{background:#fff3f0;border:1.5px solid #d84a30;border-radius:9px;padding:10px 12px;margin-bottom:11px;}
+.attach-warn p{font-size:11px;color:#d84a30;font-weight:700;line-height:1.5;}
 </style>
 </head>
 <body>
@@ -195,7 +204,7 @@ body{font-family:'Barlow',sans-serif;background:#f4f5f7;color:#1a2333;font-size:
   <div class="who-badge">📍 <strong id="s3-who"></strong></div>
 
   <div class="cat-section">
-    <div class="cat-section-title">🚨 Safety &amp; emergency</div>
+    <div class="cat-section-title pulse-title">🚨 Safety &amp; emergency</div>
     <div class="cat-grid">
       <div class="cat-btn emergency" style="--ac:#d84a30" onclick="goTo('s-emergency')"><div class="cat-ico">🚨</div><div><div class="cat-lbl">Emergency</div><div class="cat-sub">Fire, collapse, break-in</div></div></div>
       <div class="cat-btn" style="--ac:#d84a30" onclick="showForm('hazard','Common Area Hazard','⚠️','evidence')"><div class="cat-ico">⚠️</div><div><div class="cat-lbl">Common area hazard</div><div class="cat-sub">Unsafe conditions</div></div></div>
@@ -203,7 +212,7 @@ body{font-family:'Barlow',sans-serif;background:#f4f5f7;color:#1a2333;font-size:
   </div>
 
   <div class="cat-section">
-    <div class="cat-section-title">💧 Property damage</div>
+    <div class="cat-section-title pulse-title">💧 Property damage</div>
     <div class="cat-grid">
       <div class="cat-btn" style="--ac:#1a5a9e" onclick="goTo('s-triage')"><div class="cat-ico">💧</div><div><div class="cat-lbl">Water ingress</div><div class="cat-sub">Leak, flood, damp</div></div></div>
       <div class="cat-btn" style="--ac:#d84a30" onclick="showForm('insurance-claim','Insurance Claim','🔥','insurance')"><div class="cat-ico">🔥</div><div><div class="cat-lbl">Fire / damage claim</div><div class="cat-sub">Lodge insurance claim</div></div></div>
@@ -213,7 +222,7 @@ body{font-family:'Barlow',sans-serif;background:#f4f5f7;color:#1a2333;font-size:
   </div>
 
   <div class="cat-section">
-    <div class="cat-section-title">🏢 Common property</div>
+    <div class="cat-section-title pulse-title">🏢 Common property</div>
     <div class="cat-grid">
       <div class="cat-btn" style="--ac:#1a5a9e" onclick="showForm('lift','Lift','🛗','caretaker')"><div class="cat-ico">🛗</div><div><div class="cat-lbl">Lift</div><div class="cat-sub">Fault or entrapment</div></div></div>
       <div class="cat-btn" style="--ac:#1a5a9e" onclick="showForm('pool','Pool / Spa / Gym','🏊','caretaker')"><div class="cat-ico">🏊</div><div><div class="cat-lbl">Pool / spa / gym</div><div class="cat-sub">Fault or safety</div></div></div>
@@ -227,7 +236,7 @@ body{font-family:'Barlow',sans-serif;background:#f4f5f7;color:#1a2333;font-size:
   </div>
 
   <div class="cat-section">
-    <div class="cat-section-title">⚖️ By-law breaches</div>
+    <div class="cat-section-title pulse-title">⚖️ By-law breaches</div>
     <div class="cat-grid">
       <div class="cat-btn" style="--ac:#c4a038" onclick="showForm('noise','Noise Complaint','🔊','evidence')"><div class="cat-ico">🔊</div><div><div class="cat-lbl">Noise</div><div class="cat-sub">Music, parties, banging</div></div></div>
       <div class="cat-btn" style="--ac:#c4a038" onclick="showForm('smoke','Smoke / Marijuana','💨','evidence')"><div class="cat-ico">💨</div><div><div class="cat-lbl">Smoke / smell</div><div class="cat-sub">Cigarettes, marijuana</div></div></div>
@@ -239,7 +248,7 @@ body{font-family:'Barlow',sans-serif;background:#f4f5f7;color:#1a2333;font-size:
   </div>
 
   <div class="cat-section">
-    <div class="cat-section-title">📋 Owner forms &amp; requests</div>
+    <div class="cat-section-title pulse-title">📋 Owner forms &amp; requests</div>
     <div class="cat-grid">
       <div class="cat-btn" style="--ac:#2d9e5c" onclick="showForm('pet','Pet Application','🐾','pet')"><div class="cat-ico">🐾</div><div><div class="cat-lbl">Pet application</div><div class="cat-sub">Register a pet</div></div></div>
       <div class="cat-btn" style="--ac:#2d9e5c" onclick="showForm('lot-improve','Lot Improvement','🔨','lot-improve')"><div class="cat-ico">🔨</div><div><div class="cat-lbl">Lot improvement</div><div class="cat-sub">Reno or alteration</div></div></div>
@@ -439,7 +448,7 @@ function getFormHTML(id, label, type) {
       ta('Description of works (include colour, materials, size)', 'Provide full details of the improvement or alteration you wish to carry out...') +
       row2(ph('Approximate duration', 'e.g. 2 weeks'), ph('Tradesperson hours', 'e.g. Business hours only')) +
       ph('Special access requirements', 'e.g. Lift access required, materials delivery 7am') +
-      '<div class="field"><label>Upload supporting docs (quotes, plans, council approvals)</label>' + upload() + '</div>' +
+      '<div class="attach-warn"><p class="pulse-attach">⚠️ Upload supporting docs — quotes, plans, council approvals</p><p style="font-size:11px;color:#d84a30;margin-top:4px;">Applications will NOT be approved without detailed attachments. Include quotes, architectural plans, and any required council approvals.</p></div>' + upload() +
       sec('Declarations') +
       check([
         'I confirm the information is true and correct and I accept all conditions under the body corporate by-laws.',
