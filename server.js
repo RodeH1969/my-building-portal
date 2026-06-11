@@ -155,11 +155,13 @@ app.post('/api/submit', async (req, res) => {
 
     await db.ref(`submissions/${submissionId}`).set(submission);
 
-    // Also store tokens lookup for fast retrieval
+    // Batch write all tokens at once
     if (needsVote) {
+      const tokenUpdates = {};
       for (const [token, memberId] of Object.entries(tokens)) {
-        await db.ref(`tokens/${token}`).set({ submissionId, memberId });
+        tokenUpdates[token] = { submissionId, memberId };
       }
+      await db.ref('tokens').update(tokenUpdates);
     }
 
     console.log('Needs vote:', needsVote, '| Applicant email:', formData && formData.email);
@@ -196,7 +198,11 @@ app.get('/vote', async (req, res) => {
       return res.send(votePage('This link is invalid or has expired.', 'error'));
     }
 
-    const { submissionId, memberId } = tokenSnap.val();
+    const tokenData = tokenSnap.val();
+    const submissionId = tokenData.submissionId;
+    const memberId = tokenData.memberId;
+
+    console.log('Vote received:', { token, decision, submissionId, memberId });
 
     // Get submission
     const subSnap = await db.ref(`submissions/${submissionId}`).once('value');
@@ -206,14 +212,18 @@ app.get('/vote', async (req, res) => {
 
     const submission = subSnap.val();
 
-    // Check already voted
-    if (submission.votes[memberId].vote !== null) {
-      return res.send(votePage('You have already voted on this application.', 'already'));
-    }
-
     // Check submission still open
     if (submission.status !== 'pending_vote') {
       return res.send(votePage('This application has already been decided.', 'closed'));
+    }
+
+    // Check already voted
+    const memberVote = submission.votes && submission.votes[memberId];
+    if (!memberVote) {
+      return res.send(votePage('Committee member not found.', 'error'));
+    }
+    if (memberVote.vote !== null && memberVote.vote !== undefined) {
+      return res.send(votePage('You have already voted on this application.', 'already'));
     }
 
     // If requesting more info, show form
@@ -235,6 +245,8 @@ app.get('/vote', async (req, res) => {
 
     // Delete token so it can't be used again
     await db.ref(`tokens/${token}`).remove();
+    
+    console.log('Vote recorded:', { submissionId, memberId, decision });
 
     // Check if majority reached
     await checkMajority(submissionId);
@@ -376,12 +388,17 @@ async function sendVoteEmails(submission, committee) {
       </div>
     `;
 
-    await sgMail.send({
-      to: member.email,
-      from: { email: process.env.SENDGRID_FROM, name: 'My Building Portal' },
-      subject: `Vote Required: ${submission.formLabel} — Lot ${submission.lot}, ${submission.building} [${submission.ref}]`,
-      html
-    });
+    try {
+      await sgMail.send({
+        to: member.email,
+        from: { email: process.env.SENDGRID_FROM, name: 'My Building Portal' },
+        subject: `Vote Required: ${submission.formLabel} — Lot ${submission.lot}, ${submission.building} [${submission.ref}]`,
+        html
+      });
+      console.log(`Vote email sent to ${member.name} (${member.email})`);
+    } catch (emailErr) {
+      console.error(`Failed to send vote email to ${member.name}:`, emailErr.message);
+    }
   }
 }
 
