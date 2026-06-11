@@ -102,6 +102,8 @@ const COMMITTEES = {
 // ─── SUBMIT FORM ───
 app.post('/api/submit', async (req, res) => {
   try {
+    console.log('=== SUBMIT RECEIVED ===');
+    console.log('Body:', JSON.stringify(req.body));
     const { building, buildingKey, lot, formId, formLabel, formData } = req.body;
 
     const ref = 'MBP-' + Date.now().toString().slice(-6);
@@ -160,6 +162,7 @@ app.post('/api/submit', async (req, res) => {
       }
     }
 
+    console.log('Needs vote:', needsVote, '| Applicant email:', formData && formData.email);
     // Send vote emails to committee members
     if (needsVote) {
       await sendVoteEmails(submission, committee);

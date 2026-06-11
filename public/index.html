@@ -623,15 +623,20 @@ function setUrg(btn, cls) {
 }
 
 function submitForm() {
-  // Collect all form field values
+  // Collect all form field values robustly
   var formData = { name: '', email: '' };
-  var nameEl = document.querySelector('#form-content input[type=text]');
-  var emailEl = document.querySelector('#form-content input[type=email]');
-  if (nameEl) formData.name = nameEl.value.trim();
-  if (emailEl) formData.email = emailEl.value.trim();
+  var allInputs = document.querySelectorAll('#form-content input, #form-content textarea, #form-content select');
+  allInputs.forEach(function(el) {
+    if (el.type === 'text' && !formData.name && el.value.trim()) formData.name = el.value.trim();
+    if (el.type === 'email' && !formData.email && el.value.trim()) formData.email = el.value.trim();
+  });
 
-  if (!formData.name || !formData.email) {
-    alert('Please fill in your name and email address.');
+  if (!formData.name) {
+    alert('Please fill in your name.');
+    return;
+  }
+  if (!formData.email) {
+    alert('Please fill in your email address.');
     return;
   }
 
